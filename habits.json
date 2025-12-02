@@ -1,17 +1,17 @@
 {
   "habits": [
     {
-      "name": "hi",
-      "description": "yyityuy",
-      "created_date": "2025-12-01",
+      "name": "Running",
+      "description": "i ean from 2 to 3",
+      "created_date": "2025-12-02",
       "completion_dates": [
-        "2025-12-01"
+        "2025-12-02"
       ],
-      "id": "3394174a-34a6-4bfb-ae93-e1c81833627b"
+      "id": "7b278f4a-88e0-4426-b9c6-bcf320c21c83"
     }
   ],
   "metadata": {
-    "last_updated": "2025-12-01T19:28:00.109986",
+    "last_updated": "2025-12-02T17:03:23.159107",
     "total_habits": 1
   }
 }

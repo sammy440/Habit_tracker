@@ -1,146 +1,368 @@
 """
-Habit Tracker - Main GUI Application
-A desktop application for tracking daily habits with statistics and streak tracking.
-Features a modern UI with Dark/Light mode support.
+Habit Tracker - Modern GUI Application (CustomTkinter)
+Reimplements the GUI using customtkinter for a modern look.
+
+Requirements: pip install -r requirements.txt
 """
 
+import os
+import customtkinter as ctk
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 from datetime import date, timedelta
-from typing import Optional, Dict
+from typing import Optional
 
 from habit_model import HabitManager, Habit
 from storage import HabitStorage
 
-# --- Theme Configuration ---
-THEMES = {
-    "light": {
-        "bg": "#F3F4F6",           # Main window background
-        "surface": "#FFFFFF",       # Card/Panel background
-        "fg": "#1F2937",           # Main text
-        "fg_secondary": "#6B7280", # Subtitle/Info text
-        "primary": "#4F46E5",      # Primary button/accent
-        "primary_fg": "#FFFFFF",
-        "success": "#10B981",      # Success/Complete
-        "danger": "#EF4444",       # Delete/Danger
-        "select_bg": "#E0E7FF",    # Selection background
-        "select_fg": "#1F2937",    # Selection text
-        "border": "#E5E7EB",       # Borders
-        "tree_bg": "#FFFFFF",
-        "tree_fg": "#374151",
-    },
-    "dark": {
-        "bg": "#111827",
-        "surface": "#1F2937",
-        "fg": "#F9FAFB",
-        "fg_secondary": "#9CA3AF",
-        "primary": "#6366F1",
-        "primary_fg": "#FFFFFF",
-        "success": "#34D399",
-        "danger": "#F87171",
-        "select_bg": "#374151",
-        "select_fg": "#F9FAFB",
-        "border": "#374151",
-        "tree_bg": "#1F2937",
-        "tree_fg": "#D1D5DB",
-    }
-}
 
-class HabitTrackerApp:
-    """Main application class for the Habit Tracker GUI."""
-    
-    def __init__(self, root: tk.Tk):
+ctk.set_appearance_mode('System')  # 'System', 'Dark', 'Light'
+ctk.set_default_color_theme('blue')  # 'blue', 'green', 'dark-blue'
+
+
+class ModernHabitTrackerApp:
+    """Modern habit tracker using customtkinter for a contemporary UI."""
+
+    def __init__(self, root: ctk.CTk):
         self.root = root
-        self.root.title("Habit Tracker")
-        self.root.geometry("1000x700")
+        self.root.title('Habit Tracker')
+        self.root.geometry('1000x700')
         self.root.minsize(900, 600)
-        
-        # Initialize managers
+
+        # Data managers
         self.storage = HabitStorage()
         self.habit_manager = HabitManager()
         self._load_data()
-        
+
         # State
-        self.selected_habit: Optional[Habit] = None
-        self.current_theme = "light"
-        
-        # Configure Grid Layout
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        
-        # Main Container
-        self.main_container = ttk.Frame(self.root)
-        self.main_container.grid(row=0, column=0, sticky="nsew")
-        self.main_container.columnconfigure(1, weight=1) # Right panel expands
-        self.main_container.rowconfigure(1, weight=1)    # Content area expands
-        
-        # Setup UI
-        self._setup_initial_styles()
-        self._create_header()
-        self._create_sidebar()
-        self._create_main_content()
-        
-        # Apply initial theme
-        self._apply_theme(self.current_theme)
+        self.selected_habit_id: Optional[str] = None
+
+        # Layout
+        self._create_layout()
         self._refresh_habit_list()
-        
-        # Save on close
-        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+        self._update_details()
 
-    def _setup_initial_styles(self):
-        """Configure base font styles."""
-        style = ttk.Style()
-        style.theme_use('clam')
-        
-        # Fonts
-        self.fonts = {
-            'h1': ('Segoe UI', 24, 'bold'),
-            'h2': ('Segoe UI', 16, 'bold'),
-            'h3': ('Segoe UI', 12, 'bold'),
-            'body': ('Segoe UI', 10),
-            'small': ('Segoe UI', 9),
-            'stat_val': ('Segoe UI', 20, 'bold'),
-        }
+        # Close handling
+        self.root.protocol('WM_DELETE_WINDOW', self._on_closing)
 
-    def _apply_theme(self, theme_name: str):
-        """Apply colors and styles based on the selected theme."""
-        colors = THEMES[theme_name]
-        style = ttk.Style()
-        
-        # Root background
-        self.root.configure(bg=colors["bg"])
-        self.main_container.configure(style='Main.TFrame')
-        
-        # Frame Styles
-        style.configure('Main.TFrame', background=colors["bg"])
-        style.configure('Surface.TFrame', background=colors["surface"], relief='flat')
-        style.configure('Sidebar.TFrame', background=colors["surface"])
-        style.configure('Card.TFrame', background=colors["surface"], relief='groove', borderwidth=1)
-        
-        # Label Styles
-        style.configure('TLabel', background=colors["surface"], foreground=colors["fg"], font=self.fonts['body'])
-        style.configure('Header.TLabel', background=colors["surface"], foreground=colors["fg"], font=self.fonts['h1'])
-        style.configure('SubHeader.TLabel', background=colors["surface"], foreground=colors["fg"], font=self.fonts['h2'])
-        style.configure('CardTitle.TLabel', background=colors["surface"], foreground=colors["fg_secondary"], font=self.fonts['small'])
-        style.configure('CardValue.TLabel', background=colors["surface"], foreground=colors["primary"], font=self.fonts['stat_val'])
-        style.configure('Info.TLabel', background=colors["surface"], foreground=colors["fg_secondary"], font=self.fonts['small'])
-        
-        # Button Styles
-        style.configure('TButton', font=self.fonts['body'], padding=6, borderwidth=0)
-        style.map('TButton',
-            background=[('active', colors["select_bg"]), ('!active', colors["surface"])],
-            foreground=[('active', colors["primary"]), ('!active', colors["fg"])]
-        )
-        
-        # Primary Button (Add, Save)
-        style.configure('Primary.TButton', background=colors["primary"], foreground=colors["primary_fg"])
-        style.map('Primary.TButton',
-            background=[('active', colors["primary"]), ('!active', colors["primary"])], # Keep consistent
-            foreground=[('active', colors["primary_fg"]), ('!active', colors["primary_fg"])]
-        )
-        
-        # Success Button (Complete)
-        style.configure('Success.TButton', background=colors["success"], foreground="#FFFFFF")
+    def _create_layout(self):
+        # Header
+        header = ctk.CTkFrame(self.root, height=80, corner_radius=0)
+        header.pack(side='top', fill='x')
+        header.grid_propagate(False)
+
+        title = ctk.CTkLabel(header, text='🎯 Habit Tracker',
+                             font=('Segoe UI', 20, 'bold'))
+        title.pack(side='left', padx=20)
+
+        self.theme_toggle = ctk.CTkSegmentedButton(
+            header, values=['Light', 'Dark'], command=self._on_theme_changed)
+        self.theme_toggle.set(
+            'Light' if ctk.get_appearance_mode() == 'Light' else 'Dark')
+        self.theme_toggle.pack(side='right', padx=20)
+
+        # Main container
+        main = ctk.CTkFrame(self.root, corner_radius=0)
+        main.pack(side='top', fill='both', expand=True, padx=12, pady=12)
+        main.grid_rowconfigure(0, weight=1)
+        main.grid_columnconfigure(1, weight=1)
+
+        # Sidebar
+        sidebar = ctk.CTkFrame(main, width=300)
+        sidebar.grid(row=0, column=0, sticky='nswe', padx=(0, 12), pady=4)
+        sidebar.grid_propagate(False)
+
+        add_btn = ctk.CTkButton(sidebar, text='+ New Habit', fg_color='#1E90FF',
+                                hover_color='#1565C0', corner_radius=8, command=self._add_habit_dialog)
+        add_btn.pack(fill='x', padx=12, pady=(12, 8))
+
+        self.search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(
+            sidebar, placeholder_text='Search habits...', textvariable=self.search_var, width=220)
+        search_entry.pack(fill='x', padx=12, pady=(0, 12))
+        search_entry.bind('<KeyRelease>', lambda e: self._refresh_habit_list())
+
+        self.habit_scroll = ctk.CTkScrollableFrame(
+            sidebar, width=260, height=520, corner_radius=6)
+        self.habit_scroll.pack(fill='both', expand=True, padx=8)
+
+        # Content
+        content = ctk.CTkFrame(main, corner_radius=8)
+        content.grid(row=0, column=1, sticky='nswe')
+        content.grid_rowconfigure(2, weight=1)
+
+        self.detail_title = ctk.CTkLabel(
+            content, text='Select a habit to view details', font=('Segoe UI', 18, 'bold'))
+        self.detail_title.grid(
+            row=0, column=0, sticky='w', padx=20, pady=(20, 6))
+
+        self.detail_desc = ctk.CTkLabel(content, text='', font=(
+            'Segoe UI', 12), text_color='#7C8BA4', wraplength=520)
+        self.detail_desc.grid(row=1, column=0, sticky='w', padx=20)
+
+        action_frame = ctk.CTkFrame(content, fg_color='transparent')
+        action_frame.grid(row=0, column=1, rowspan=2,
+                          sticky='e', padx=20, pady=6)
+
+        self.checkin_btn = ctk.CTkButton(action_frame, text='✓ Check In', fg_color='#10B981',
+                                         hover_color='#0F9A60', command=self._toggle_today_completion)
+        self.checkin_btn.pack(side='right', padx=6)
+        ctk.CTkButton(action_frame, text='Edit', fg_color='transparent',
+                      hover_color='#dddddd', command=self._edit_habit_dialog).pack(side='right', padx=6)
+        ctk.CTkButton(action_frame, text='Delete', fg_color='#F87171',
+                      hover_color='#ef6b6b', command=self._delete_habit).pack(side='right')
+
+        # Stats
+        stats_frame = ctk.CTkFrame(content, fg_color='transparent')
+        stats_frame.grid(row=2, column=0, columnspan=2,
+                         sticky='nwe', padx=20, pady=20)
+        stats_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        self.card_streak = self._create_stat_card(
+            stats_frame, '🔥 Current Streak', '0', 0)
+        self.card_best = self._create_stat_card(
+            stats_frame, '🏆 Best Streak', '0', 1)
+        self.card_total = self._create_stat_card(
+            stats_frame, '✅ Total Check-ins', '0', 2)
+        self.card_rate = self._create_stat_card(
+            stats_frame, '📊 Consistency', '0%', 3)
+
+        # Recent history
+        self.history_frame = ctk.CTkFrame(content, fg_color='transparent')
+        self.history_frame.grid(
+            row=3, column=0, columnspan=2, sticky='nwe', padx=20, pady=(0, 20))
+        self.history_label = ctk.CTkLabel(
+            self.history_frame, text='', font=('Consolas', 12))
+        self.history_label.pack(fill='x')
+
+    def _create_stat_card(self, parent, title, value, col):
+        card = ctk.CTkFrame(parent, corner_radius=8, fg_color='transparent')
+        card.grid(row=0, column=col, padx=6, sticky='nwe')
+        ctk.CTkLabel(card, text=title, font=('Segoe UI', 10), text_color='#98A1B3').pack(
+            anchor='w', padx=12, pady=(10, 0))
+        lbl = ctk.CTkLabel(card, text=value, font=('Segoe UI', 18, 'bold'))
+        lbl.pack(anchor='w', padx=12, pady=(6, 12))
+        return lbl
+
+    def _refresh_habit_list(self):
+        for w in self.habit_scroll.winfo_children():
+            w.destroy()
+
+        query = self.search_var.get().strip().lower() if getattr(
+            self, 'search_var', None) else ''
+        for habit in self.habit_manager.get_all_habits():
+            if query and query not in habit.name.lower():
+                continue
+
+            item_frame = ctk.CTkFrame(
+                self.habit_scroll, corner_radius=8, fg_color='transparent')
+            item_frame.pack(fill='x', pady=6, padx=6)
+
+            b = ctk.CTkButton(item_frame, text=f"{habit.name}", anchor='w', fg_color='transparent',
+                              hover_color='#2D2F31', command=lambda id=habit.id: self._select_habit(id))
+            b.pack(side='left', fill='x', expand=True)
+
+            status = '✅' if habit.is_completed_today() else '⬜'
+            ctk.CTkLabel(item_frame, text=f"{status} {habit.get_current_streak()} 🔥", width=80, anchor='e').pack(
+                side='right')
+
+            if self.selected_habit_id == habit.id:
+                b.configure(fg_color='#374151', hover_color='#2f3a44')
+
+    def _select_habit(self, habit_id: str):
+        self.selected_habit_id = habit_id
+        self._refresh_habit_list()
+        self._update_details()
+
+    def _update_details(self):
+        if not self.selected_habit_id:
+            self.detail_title.configure(text='Select a habit to view details')
+            self.detail_desc.configure(text='')
+            self.card_streak.configure(text='0')
+            self.card_best.configure(text='0')
+            self.card_total.configure(text='0')
+            self.card_rate.configure(text='0%')
+            self.history_label.configure(text='')
+            self.checkin_btn.configure(state='disabled')
+            return
+
+        h = self.habit_manager.get_habit(self.selected_habit_id)
+        if not h:
+            self.selected_habit_id = None
+            return
+
+        self.detail_title.configure(text=h.name)
+        self.detail_desc.configure(
+            text=h.description if h.description else '\u00A0')
+        self.card_streak.configure(text=str(h.get_current_streak()))
+        self.card_best.configure(text=str(h.get_longest_streak()))
+        self.card_total.configure(text=str(h.get_total_completions()))
+        self.card_rate.configure(text=f"{h.get_completion_rate():.0f}%")
+        self.checkin_btn.configure(state='normal')
+        if h.is_completed_today():
+            self.checkin_btn.configure(
+                text='✕ Undo Check-in', fg_color='#FF7B7B')
+        else:
+            self.checkin_btn.configure(text='✓ Check In', fg_color='#10B981')
+
+        days = []
+        today = date.today()
+        for i in range(6, -1, -1):
+            d = today - timedelta(days=i)
+            day_name = d.strftime('%a')
+            status = '🟩' if h.is_completed_on_date(d) else '⬜'
+            days.append(f"{day_name}: {status}")
+
+        self.history_label.configure(text='   '.join(days))
+
+    # --- CRUD & Actions ---
+    def _add_habit_dialog(self):
+        self._show_input_dialog('Add Habit', self._save_new_habit)
+
+    def _edit_habit_dialog(self):
+        if not self.selected_habit_id:
+            return
+        h = self.habit_manager.get_habit(self.selected_habit_id)
+        if not h:
+            return
+        self._show_input_dialog('Edit Habit', self._save_edit_habit,
+                                default_name=h.name, default_desc=h.description)
+
+    def _show_input_dialog(self, title, callback, default_name='', default_desc=''):
+        d = ctk.CTkToplevel(self.root)
+        d.geometry('420x260')
+        d.title(title)
+        d.transient(self.root)
+        d.grab_set()
+
+        frame = ctk.CTkFrame(d)
+        frame.pack(fill='both', expand=True, padx=16, pady=16)
+
+        ctk.CTkLabel(frame, text='Name').pack(anchor='w')
+        name_var = ctk.StringVar(value=default_name)
+        name_entry = ctk.CTkEntry(
+            frame, textvariable=name_var, placeholder_text='e.g. Read 10 pages')
+        name_entry.pack(fill='x', pady=(6, 12))
+
+        ctk.CTkLabel(frame, text='Description').pack(anchor='w')
+        desc_var = ctk.StringVar(value=default_desc)
+        desc_entry = ctk.CTkEntry(
+            frame, textvariable=desc_var, placeholder_text='Optional short description')
+        desc_entry.pack(fill='x', pady=(6, 12))
+
+        def on_save(event=None):
+            if name_var.get().strip():
+                callback(name_var.get(), desc_var.get())
+                d.destroy()
+                return
+            messagebox.showwarning('Validation', 'Name cannot be empty')
+
+        name_entry.focus()
+        d.bind('<Return>', on_save)
+
+        button_row = ctk.CTkFrame(frame, fg_color='transparent')
+        button_row.pack(fill='x', pady=(6, 0))
+        ctk.CTkButton(button_row, text='Cancel', command=d.destroy,
+                      fg_color='transparent').pack(side='right', padx=6)
+        ctk.CTkButton(button_row, text='Save', command=on_save,
+                      fg_color='#1E90FF').pack(side='right')
+
+    def _save_new_habit(self, name, desc):
+        self.habit_manager.add_habit(name, desc)
+        self._save_and_refresh()
+
+    def _save_edit_habit(self, name, desc):
+        if not self.selected_habit_id:
+            return
+        self.habit_manager.update_habit(self.selected_habit_id, name, desc)
+        self._save_and_refresh()
+
+    def _delete_habit(self):
+        if not self.selected_habit_id:
+            return
+        h = self.habit_manager.get_habit(self.selected_habit_id)
+        if not h:
+            return
+        if messagebox.askyesno('Delete', f"Delete '{h.name}'?"):
+            self.habit_manager.remove_habit(h.id)
+            self.selected_habit_id = None
+            self._save_and_refresh()
+
+    def _toggle_today_completion(self):
+        if not self.selected_habit_id:
+            return
+        h = self.habit_manager.get_habit(self.selected_habit_id)
+        if not h:
+            return
+        if h.is_completed_today():
+            h.unmark_completed()
+        else:
+            h.mark_completed()
+        self._save_and_refresh()
+
+    def _save_and_refresh(self):
+        self.storage.save_data(self.habit_manager.to_dict())
+        self._refresh_habit_list()
+        self._update_details()
+
+    def _load_data(self):
+        data = self.storage.load_data()
+        self.habit_manager.from_dict(data)
+
+    def _on_closing(self):
+        self.storage.save_data(self.habit_manager.to_dict())
+        self.root.destroy()
+
+    def _on_theme_changed(self, choice):
+        if choice.lower().startswith('dark'):
+            ctk.set_appearance_mode('Dark')
+        else:
+            ctk.set_appearance_mode('Light')
+
+
+def main():
+    root = ctk.CTk()
+    # Attempt to improve DPI awareness on Windows
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
+    app = ModernHabitTrackerApp(root)
+    root.mainloop()
+
+
+if __name__ == '__main__':
+    main()
+"""
+Habit Tracker - Modern GUI Application (CustomTkinter)
+Reimplements the GUI using customtkinter for a modern look.
+
+Requirements: pip install customtkinter
+"""
+
+
+
+
+# -- Appearance Configuration --
+ctk.set_appearance_mode('System')  # 'System', 'Dark', 'Light'
+ctk.set_default_color_theme('blue')  # 'blue', 'green', 'dark-blue'
+
+
+class ModernHabitTrackerApp:
+    """Modern habit tracker using customtkinter for a contemporary UI."""
+
+    def __init__(self, root: ctk.CTk):
+        self.root = root
+        self.root.title('Habit Tracker')
+        self.root.geometry('1000x700')
+        self.root.minsize(900, 600)
+
+        # Data managers
+        self.storage = HabitStorage()
+        if __name__ == '__main__':
+            main()
         style.map('Success.TButton', background=[('active', colors["success"])])
         
         # Danger Button (Delete)

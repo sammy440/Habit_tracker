@@ -20,7 +20,7 @@ A beautiful and functional desktop application for tracking your daily habits, b
 ### Prerequisites
 
 - Python 3.10 or higher
-- No additional dependencies required (uses Python standard library)
+- Install UI dependency (CustomTkinter) for modern UI
 
 ### Installation
 
@@ -31,10 +31,14 @@ A beautiful and functional desktop application for tracking your daily habits, b
    cd "c:\Users\USER\Desktop\Habit Tracker"
    ```
 
-3. **Run the application**:
-   ```bash
-   python habit_tracker.py
-   ```
+3. **Install dependencies** (optional for modern UI improvements):
+  ```powershell
+  pip install -r requirements.txt
+  ```
+4. **Run the application**:
+  ```powershell
+  python habit_tracker.py
+  ```
 
 That's it! The application will start and automatically create a `habits.json` file for data storage.
 
