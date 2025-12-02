@@ -1,0 +1,76 @@
+name: Build & Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build (Windows)
+        run: |
+          pyinstaller --onefile --noconsole --add-data "habits.json;." --name "HabitTracker.Windows" habit_tracker.py
+      - name: Upload Release Asset (Windows exe)
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/HabitTracker.Windows.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build (Linux)
+        run: |
+          pyinstaller --onefile --noconsole --add-data "habits.json:./" --name "HabitTracker.Linux" habit_tracker.py
+      - name: Upload Release Asset (Linux binary)
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/HabitTracker.Linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build (macOS)
+        run: |
+          pyinstaller --onefile --noconsole --add-data "habits.json:./" --name "HabitTracker.Mac" habit_tracker.py
+      - name: Upload Release Asset (macOS binary)
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/HabitTracker.Mac
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

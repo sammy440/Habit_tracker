@@ -191,6 +191,59 @@ Contributions are welcome! Feel free to:
 
 ---
 
+## 📦 Distributing a Prebuilt App (PyInstaller)
+
+You can bundle this Python app into a single executable with PyInstaller so users can download and run it without installing Python.
+
+### Build locally
+
+- Install PyInstaller and dependencies:
+  ```powershell
+  pip install -r requirements.txt
+  pip install pyinstaller
+  ```
+- Build a single-file Windows EXE (from a Windows machine):
+  ```powershell
+  pyinstaller --onefile --noconsole --add-data "habits.json;." --name HabitTracker habit_tracker.py
+  ```
+  For macOS/Linux use `:` instead of `;` in the `--add-data` argument:
+  ```bash
+  pyinstaller --onefile --noconsole --add-data "habits.json:./" --name HabitTracker habit_tracker.py
+  ```
+
+Notes:
+- `--onefile` produces a single self-extracting executable.
+- `--noconsole` hides the console (useful for GUI apps). Omit if you want to see logs.
+- The `--add-data` option bundles the `habits.json` default file so it can be copied to the user’s data directory by the app on first run.
+
+### Persistent data location
+
+This app now stores user data in a user-writable path (e.g., `~/.habit_tracker/habits.json` on Linux/macOS or `%USERPROFILE%\\.habit_tracker\\habits.json` on Windows). On first run, the app copies the bundled `habits.json` (if present) to that location so changes persist across reboots.
+
+### Create a Release on GitHub (Automatic Builds)
+
+I added a GitHub Actions workflow `.github/workflows/build-and-release.yml` that builds platform-specific executables when you publish a release. Steps:
+
+1. Tag and create a release on GitHub (e.g. `v1.0.0`).
+2. The workflow builds on Windows, Linux, and macOS runners and attaches artifacts to the release.
+3. Users can download the appropriate build from the GitHub release page.
+
+If your release does not show artifacts:
+- Make sure the workflow file is present in the default branch (typically `master` or `main`).
+- A release will only trigger the workflow when the release is **published**.
+- Check the Actions tab for logs and any missing dependencies.
+
+Notes/Limitations:
+- PyInstaller builds are platform-specific — Windows binaries must be built on Windows, macOS on macOS, etc. The workflow handles this by using OS-specific runners.
+- Code signing is not implemented in the workflow — you may want to sign Windows executables to avoid SmartScreen prompts.
+- Test builds on a clean VM to validate the bundled app has all dependencies.
+
+### Troubleshooting
+
+- If the EXE crashes, run the non-`--noconsole` build to see console logs for missing imports or other issues.
+- Use `--hidden-import` or spec files for hidden imports if PyInstaller misses some modules.
+
+
 **Happy Habit Building! 🚀**
 
 *Built with ❤️ using Python and Tkinter*

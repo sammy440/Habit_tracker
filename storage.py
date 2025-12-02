@@ -5,26 +5,66 @@ Manages reading from and writing to habits.json.
 
 import json
 import os
+import shutil
+import sys
 from typing import Dict, Any
 from datetime import datetime
+
+
+def _resource_path(relative_path: str) -> str:
+    """Return absolute path to resource, works for dev and for PyInstaller.
+
+    When bundled by PyInstaller with --onefile the data files are extracted
+    to a temporary folder pointed to by sys._MEIPASS. Otherwise return the
+    path relative to this source file.
+    """
+    try:
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
 
 
 class HabitStorage:
     """Handles persistent storage of habit data in JSON format."""
     
-    def __init__(self, filename: str = "habits.json"):
+    def __init__(self, filename: str = None):
         """
         Initialize storage handler.
-        
+
         Args:
-            filename: Name of the JSON file for storing habits
+            filename: Optional path to JSON file. If None, a writable file is
+                created under the user's app data folder (e.g. ~/.habit_tracker/habits.json).
         """
-        self.filename = filename
+        # Determine a safe, writable path for persistent data
+        if filename:
+            self.filename = os.path.abspath(filename)
+        else:
+            # Default location in the user's home directory
+            home = os.path.expanduser('~')
+            app_dir = os.path.join(home, '.habit_tracker')
+            os.makedirs(app_dir, exist_ok=True)
+            self.filename = os.path.join(app_dir, 'habits.json')
         self._ensure_file_exists()
     
     def _ensure_file_exists(self):
-        """Create the JSON file if it doesn't exist."""
+        """Create the JSON file if it doesn't exist.
+
+        If a bundled default `habits.json` is available (for example added with
+        PyInstaller's --add-data), it will be copied to the user's app data
+        location on first run so the user can modify it.
+        """
         if not os.path.exists(self.filename):
+            # Try to copy the bundled default JSON if present
+            try:
+                bundled_path = _resource_path('habits.json')
+                if os.path.exists(bundled_path):
+                    shutil.copy(bundled_path, self.filename)
+                    return
+            except Exception:
+                pass
+
+            # Fall back to creating an empty file
             self.save_data({"habits": [], "metadata": {"created": datetime.now().isoformat()}})
     
     def load_data(self) -> Dict[str, Any]:
@@ -50,6 +90,8 @@ class HabitStorage:
             data: Dictionary containing habit data to save
         """
         try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(self.filename), exist_ok=True)
             with open(self.filename, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
