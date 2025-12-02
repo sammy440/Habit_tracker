@@ -1,0 +1,17 @@
+{
+  "habits": [
+    {
+      "name": "hi",
+      "description": "yyityuy",
+      "created_date": "2025-12-01",
+      "completion_dates": [
+        "2025-12-01"
+      ],
+      "id": "3394174a-34a6-4bfb-ae93-e1c81833627b"
+    }
+  ],
+  "metadata": {
+    "last_updated": "2025-12-01T19:28:00.109986",
+    "total_habits": 1
+  }
+}
